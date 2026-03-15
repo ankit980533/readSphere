@@ -63,6 +63,16 @@ public class AiService {
         // Step 3: Send to AI to identify which are actual chapter starts
         List<ChapterInfo> chapters = identifyChaptersWithAI(shortLines, fullText);
         
+        // Step 4: If AI-based detection failed, use direct regex scan as final fallback
+        if (chapters.isEmpty() || chapters.size() == 1) {
+            log.info("AI detection returned {} chapters, trying direct regex fallback", chapters.size());
+            List<ChapterInfo> regexChapters = detectChaptersByDirectRegex(fullText);
+            if (regexChapters.size() >= 2) {
+                log.info("Direct regex fallback found {} chapters", regexChapters.size());
+                chapters = regexChapters;
+            }
+        }
+        
         if (chapters.isEmpty()) {
             chapters.add(new ChapterInfo(1, "Full Text", fullText));
         }
@@ -816,6 +826,88 @@ public class AiService {
             String content = fullText.substring(start, end);
             chapters.add(new ChapterInfo(chapters.size() + 1, li.text, content));
             log.info("Chapter {}: '{}' - {} words", chapters.size(), li.text, content.split("\\s+").length);
+        }
+        
+        return chapters;
+    }
+
+    /**
+     * Direct regex-based chapter detection that scans the full text line by line.
+     * This is a robust fallback that doesn't depend on the short lines extraction or AI.
+     * It finds "CHAPTER X" headings, skips TOC entries (clustered short lines at the start),
+     * and splits content at each heading.
+     */
+    private List<ChapterInfo> detectChaptersByDirectRegex(String fullText) {
+        String[] lines = fullText.split("\n");
+        
+        // Regex patterns for chapter headings
+        java.util.regex.Pattern chapterPattern = java.util.regex.Pattern.compile(
+            "(?i)^\\s*(CHAPTER|PROLOGUE|EPILOGUE)\\s*[\\dIVXLCDM]*(\\s.*)?$"
+        );
+        
+        // First pass: find all chapter heading positions
+        List<int[]> allMatches = new ArrayList<>(); // [charPos, lineIndex]
+        int charPos = 0;
+        for (int i = 0; i < lines.length; i++) {
+            String trimmed = lines[i].trim();
+            if (trimmed.length() >= 2 && trimmed.length() <= 80 && chapterPattern.matcher(trimmed).matches()) {
+                allMatches.add(new int[]{charPos, i});
+            }
+            charPos += lines[i].length() + 1;
+        }
+        
+        if (allMatches.size() < 2) {
+            return Collections.emptyList();
+        }
+        
+        log.info("Direct regex found {} chapter markers", allMatches.size());
+        
+        // Detect TOC cluster: look for a group of headings where consecutive entries
+        // are very close together (< 200 chars apart), followed by a big gap
+        int tocEndIndex = -1;
+        for (int i = 0; i < allMatches.size() - 1; i++) {
+            int gap = allMatches.get(i + 1)[0] - allMatches.get(i)[0];
+            if (gap > 1000) {
+                // Big gap found — everything before this might be TOC
+                // But only if the entries before were tightly clustered
+                boolean isTocCluster = true;
+                for (int j = 0; j < i; j++) {
+                    if (allMatches.get(j + 1)[0] - allMatches.get(j)[0] > 200) {
+                        isTocCluster = false;
+                        break;
+                    }
+                }
+                if (isTocCluster && i >= 2) {
+                    tocEndIndex = i;
+                    log.info("Direct regex: detected TOC cluster of {} entries, skipping", tocEndIndex + 1);
+                }
+                break;
+            }
+        }
+        
+        // Build chapter list, skipping TOC entries
+        int startFrom = tocEndIndex >= 0 ? tocEndIndex + 1 : 0;
+        List<ChapterInfo> chapters = new ArrayList<>();
+        int backMatterPos = findBackMatter(fullText);
+        
+        for (int i = startFrom; i < allMatches.size(); i++) {
+            int start = allMatches.get(i)[0];
+            int end;
+            if (i < allMatches.size() - 1) {
+                end = allMatches.get(i + 1)[0];
+            } else {
+                end = Math.min(backMatterPos, fullText.length());
+            }
+            
+            if (end <= start) continue;
+            
+            // Skip very short sections (< 200 chars) unless it's the last
+            if (end - start < 200 && i < allMatches.size() - 1) continue;
+            
+            String content = fullText.substring(start, end);
+            String heading = lines[allMatches.get(i)[1]].trim();
+            chapters.add(new ChapterInfo(chapters.size() + 1, heading, content));
+            log.info("Direct regex chapter {}: '{}' - {} words", chapters.size(), heading, content.split("\\s+").length);
         }
         
         return chapters;
