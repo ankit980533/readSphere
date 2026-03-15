@@ -18,6 +18,7 @@ public class AiCostTracker {
     
     private static final Logger log = LoggerFactory.getLogger(AiCostTracker.class);
     
+    
     private final AtomicInteger totalCalls = new AtomicInteger(0);
     private final AtomicLong totalInputTokens = new AtomicLong(0);
     private final AtomicLong totalOutputTokens = new AtomicLong(0);
