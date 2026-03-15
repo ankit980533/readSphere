@@ -252,10 +252,11 @@ public class PdfProcessingService {
         }
 
         // Find or create genre
-        Genre genre = genreRepository.findByName(finalGenre)
+        String genreName = finalGenre;
+        Genre genre = genreRepository.findByName(genreName)
                 .orElseGet(() -> {
                     Genre newGenre = new Genre();
-                    newGenre.setName(finalGenre);
+                    newGenre.setName(genreName);
                     return genreRepository.save(newGenre);
                 });
 
