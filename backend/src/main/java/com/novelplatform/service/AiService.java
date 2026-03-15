@@ -117,7 +117,7 @@ public class AiService {
         // APPROACH 2: Pattern-based detection for common chapter formats
         List<LineInfo> patternMatches = findChaptersByPattern(shortLines);
         
-        if (patternMatches.size() >= 3) {
+        if (patternMatches.size() >= 2) {
             log.info("Pattern matching found {} chapters, using pattern-based detection", patternMatches.size());
             return createChaptersFromLines(patternMatches, fullText);
         }
@@ -216,8 +216,8 @@ public class AiService {
             }
         }
         
-        // Detect TOC: Chapter titles that appear in the first 15% of the book AND are clustered together
-        // are likely TOC entries
+        // Detect TOC: Only mark entries as TOC if the same title appears BOTH in an early
+        // cluster AND later in the document. If a title only appears once, it's a real chapter heading.
         Set<Integer> tocIndices = new HashSet<>();
         List<Integer> allMatchIndices = new ArrayList<>();
         for (List<Integer> indices : titleIndices.values()) {
@@ -225,26 +225,42 @@ public class AiService {
         }
         Collections.sort(allMatchIndices);
         
-        // TOC is usually in the first 15% of short lines
-        int tocBoundary = shortLines.size() / 7; // ~14% of the document
+        // Use character position (not short line index) for TOC boundary — first 10% of text
+        int maxCharPos = shortLines.isEmpty() ? 0 : shortLines.get(shortLines.size() - 1).charPos;
+        int tocCharBoundary = maxCharPos / 10;
         
-        // Find clusters of chapter titles in the early part of the book
-        // A cluster is when 3+ chapter markers appear within a small range
+        // Find early cluster: entries whose charPos is in the first 10% of the document
         List<Integer> earlyMatches = new ArrayList<>();
         for (int idx : allMatchIndices) {
-            if (idx < tocBoundary) {
+            if (shortLines.get(idx).charPos < tocCharBoundary) {
                 earlyMatches.add(idx);
             }
         }
         
-        // If 3+ chapter markers are in the first 15% and clustered, mark them as TOC
+        // Only treat early matches as TOC if:
+        // 1. There are 3+ clustered entries in the early section
+        // 2. The cluster is tight (spans < 3000 chars)
+        // 3. Each title in the cluster also appears LATER in the document (i.e., has a duplicate)
         if (earlyMatches.size() >= 3) {
-            int first = earlyMatches.get(0);
-            int last = earlyMatches.get(earlyMatches.size() - 1);
-            // If the cluster spans less than 200 lines, it's likely a TOC
-            if (last - first < 200) {
-                tocIndices.addAll(earlyMatches);
-                log.info("Detected TOC cluster: {} entries from index {} to {}", earlyMatches.size(), first, last);
+            int firstCharPos = shortLines.get(earlyMatches.get(0)).charPos;
+            int lastCharPos = shortLines.get(earlyMatches.get(earlyMatches.size() - 1)).charPos;
+            
+            if (lastCharPos - firstCharPos < 3000) {
+                // Only mark as TOC if the title has a duplicate occurrence later
+                for (int earlyIdx : earlyMatches) {
+                    String earlyText = shortLines.get(earlyIdx).text.toUpperCase().replaceAll("\\s+", " ").trim();
+                    List<Integer> allOccurrences = titleIndices.getOrDefault(earlyText, Collections.emptyList());
+                    
+                    // Check if there's at least one occurrence OUTSIDE the early cluster
+                    boolean hasDuplicate = allOccurrences.stream()
+                            .anyMatch(idx -> !earlyMatches.contains(idx));
+                    
+                    if (hasDuplicate) {
+                        tocIndices.add(earlyIdx);
+                    }
+                }
+                log.info("Detected TOC cluster: {} entries marked as TOC (out of {} early matches)", 
+                    tocIndices.size(), earlyMatches.size());
             }
         }
         
@@ -266,18 +282,15 @@ public class AiService {
             }
             
             // If ALL occurrences are in TOC, this chapter title only exists in TOC
-            // Skip it - there's no actual chapter with this heading
             if (selectedIdx == null) {
                 log.info("Skipping '{}' - only appears in TOC, no actual chapter heading", entry.getKey());
                 continue;
             }
             
-            if (selectedIdx != null) {
-                LineInfo li = shortLines.get(selectedIdx);
-                matches.add(li);
-                log.info("Chapter '{}': selected index {} at position {}", 
-                    entry.getKey(), selectedIdx, li.charPos);
-            }
+            LineInfo li = shortLines.get(selectedIdx);
+            matches.add(li);
+            log.info("Chapter '{}': selected index {} at position {}", 
+                entry.getKey(), selectedIdx, li.charPos);
         }
         
         // Sort by position in text
@@ -292,7 +305,7 @@ public class AiService {
         List<LineInfo> matches = new ArrayList<>();
         
         for (LineInfo li : shortLines) {
-            String text = li.text.trim().toUpperCase();
+            String text = li.text.trim();
             if (text.matches("(?i).*CHAPTER.*") || 
                 text.matches("(?i)^PART\\s+.*") ||
                 text.matches("(?i)^[IVXLCDM]+\\.?\\s*$") ||  // Just Roman numerals
@@ -301,10 +314,24 @@ public class AiService {
             }
         }
         
-        // Keep only the second half (skip TOC)
-        if (matches.size() > 10) {
-            int halfPoint = matches.size() / 2;
-            matches = new ArrayList<>(matches.subList(halfPoint, matches.size()));
+        // Use character position to skip TOC instead of naive half-split.
+        // If there are many matches, check if the first cluster is a TOC by looking
+        // for a gap in character positions (TOC entries are close together, then there's
+        // a big gap before actual chapter content starts).
+        if (matches.size() > 6) {
+            int maxGap = 0;
+            int gapIndex = 0;
+            for (int i = 1; i < matches.size(); i++) {
+                int gap = matches.get(i).charPos - matches.get(i - 1).charPos;
+                if (gap > maxGap) {
+                    maxGap = gap;
+                    gapIndex = i;
+                }
+            }
+            // If the biggest gap separates roughly equal halves, split there (skip TOC)
+            if (gapIndex > 0 && gapIndex <= matches.size() / 2) {
+                matches = new ArrayList<>(matches.subList(gapIndex, matches.size()));
+            }
         }
         
         return matches;
@@ -984,7 +1011,10 @@ public class AiService {
         
         int pos = 0;
         for (ChapterInfo ch : result.chapters) {
-            int start = text.indexOf(ch.content.substring(0, Math.min(100, ch.content.length())));
+            // Search for chapter content starting from current position to avoid
+            // matching TOC or earlier occurrences
+            String searchStr = ch.content.substring(0, Math.min(100, ch.content.length()));
+            int start = text.indexOf(searchStr, pos);
             if (start == -1) start = pos;
             int end = start + ch.content.length();
             chapters.add(new ChapterDetectionResult(ch.number, ch.title, start, end));

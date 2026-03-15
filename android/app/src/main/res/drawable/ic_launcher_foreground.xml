@@ -4,14 +4,58 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Open book shape - left page -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,30 L54,78 M30,54 L78,54"
-        android:strokeWidth="8"
-        android:strokeColor="#FFFFFF"/>
+        android:pathData="M54,30 L54,82 Q40,78 28,80 L28,32 Q40,30 54,34 Z" />
+
+    <!-- Open book shape - right page -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M38,38 L70,38 L70,70 L38,70 Z"
-        android:strokeWidth="4"
-        android:strokeColor="#FFFFFF"/>
+        android:pathData="M54,30 L54,82 Q68,78 80,80 L80,32 Q68,30 54,34 Z" />
+
+    <!-- Book spine -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M52,30 L56,30 L56,82 L52,82 Z" />
+
+    <!-- Left page lines -->
+    <path
+        android:strokeColor="#6C63FF"
+        android:strokeWidth="1"
+        android:pathData="M34,40 L50,42" />
+    <path
+        android:strokeColor="#6C63FF"
+        android:strokeWidth="1"
+        android:pathData="M34,46 L50,47" />
+    <path
+        android:strokeColor="#6C63FF"
+        android:strokeWidth="1"
+        android:pathData="M34,52 L50,52" />
+    <path
+        android:strokeColor="#6C63FF"
+        android:strokeWidth="1"
+        android:pathData="M34,58 L50,57" />
+
+    <!-- Glowing sphere/orb above book -->
+    <path
+        android:fillColor="#6C63FF"
+        android:pathData="M54,26 m-10,0 a10,10 0,1 1,20 0 a10,10 0,1 1,-20 0" />
+
+    <!-- Inner sphere highlight -->
+    <path
+        android:fillColor="#8B83FF"
+        android:pathData="M50,22 m-4,0 a4,4 0,1 1,8 0 a4,4 0,1 1,-8 0" />
+
+    <!-- Sparkle dots around sphere -->
+    <path
+        android:fillColor="#6C63FF"
+        android:pathData="M40,18 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
+    <path
+        android:fillColor="#6C63FF"
+        android:pathData="M68,18 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
+    <path
+        android:fillColor="#6C63FF"
+        android:pathData="M54,10 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
 </vector>
