@@ -1,0 +1,31 @@
+# OpenAI-specific configuration
+spring:
+  profiles: openai
+
+ai:
+  enabled: true
+  provider: openai
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+    url: https://api.openai.com/v1/chat/completions
+    model: gpt-3.5-turbo
+    timeout: 30000  # 30 seconds
+    max-retries: 3
+
+# Cost optimization settings
+ai-optimization:
+  sample-sizes:
+    chapter-detection: 8000  # words
+    genre-detection: 1000
+    summary-generation: 5000
+    content-moderation: 3000
+  
+  cache:
+    enabled: true
+    ttl: 3600  # 1 hour
+  
+  rate-limiting:
+    enabled: true
+    requests-per-minute: 60

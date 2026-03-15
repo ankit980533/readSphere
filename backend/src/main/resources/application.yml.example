@@ -1,0 +1,41 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/noveldb
+    username: noveluser
+    password: YOUR_DB_PASSWORD
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+jwt:
+  secret: YOUR_JWT_SECRET_AT_LEAST_64_CHARACTERS_LONG
+  expiration: 86400000
+
+openai:
+  api:
+    key: YOUR_OPENAI_API_KEY
+    url: https://api.openai.com/v1/chat/completions
+
+aws:
+  s3:
+    bucket: novel-platform
+    region: ap-south-1
+    enabled: false
+  credentials:
+    access-key: YOUR_AWS_ACCESS_KEY
+    secret-key: YOUR_AWS_SECRET_KEY
+
+server:
+  port: 8080
+
+ai:
+  enabled: true
+  provider: openai

@@ -1,0 +1,41 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+    url: https://api.openai.com/v1/chat/completions
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:novel-platform}
+    region: ${AWS_REGION:ap-south-1}
+    enabled: ${AWS_S3_ENABLED:false}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
+server:
+  port: ${PORT:8080}
+
+ai:
+  enabled: ${AI_ENABLED:true}
+  provider: ${AI_PROVIDER:openai}

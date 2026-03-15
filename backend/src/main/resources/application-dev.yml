@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/noveldb
+    username: postgres
+    password: password
+
+ai:
+  enabled: false  # Disable AI in development to save costs
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY:}

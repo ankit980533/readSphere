@@ -1,0 +1,38 @@
+# Stage 1: Build backend
+FROM eclipse-temurin:17-jdk-alpine AS backend-build
+WORKDIR /app
+COPY backend/pom.xml .
+COPY backend/src ./src
+RUN apk add --no-cache maven && mvn clean package -DskipTests
+
+# Stage 2: Build frontend
+FROM node:20-alpine AS frontend-build
+WORKDIR /app
+COPY web/package*.json ./
+RUN npm ci
+COPY web/ .
+RUN npm run build
+
+# Stage 3: Final image
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+# Install nginx
+RUN apk add --no-cache nginx
+
+# Copy backend JAR
+COPY --from=backend-build /app/target/*.jar app.jar
+
+# Copy frontend build
+COPY --from=frontend-build /app/dist /usr/share/nginx/html
+
+# Copy nginx config
+COPY nginx-lightsail.conf /etc/nginx/http.d/default.conf
+
+# Copy startup script
+COPY start-services.sh /start-services.sh
+RUN chmod +x /start-services.sh
+
+EXPOSE 8080
+
+CMD ["/start-services.sh"]

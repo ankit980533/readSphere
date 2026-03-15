@@ -1,0 +1,21 @@
+.DS_Store
+*.log
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Build outputs
+target/
+dist/
+node_modules/
+*.jar
+
+# Secrets - NEVER commit these
+**/application.yml
+**/application-local.yml
+**/secrets.yml
