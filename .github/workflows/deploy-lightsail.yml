@@ -1,4 +1,4 @@
-name: Deploy to Lightsail Instance
+name: Deploy to Lightsail
 
 on:
   push:
@@ -12,37 +12,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Build backend
-        run: |
-          cd backend
-          chmod +x mvnw
-          ./mvnw clean package -DskipTests
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build frontend
-        run: |
-          cd web
-          npm ci
-          npm run build
-
-      - name: Deploy to Lightsail
+      - name: Deploy to Lightsail via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.LIGHTSAIL_HOST }}
-          username: ${{ secrets.LIGHTSAIL_USER }}
+          username: ubuntu
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
-            cd /home/${{ secrets.LIGHTSAIL_USER }}/novel-platform
+            cd /home/ubuntu/novel-platform
             git pull origin main
             
             # Build backend
@@ -50,7 +27,7 @@ jobs:
             chmod +x mvnw
             ./mvnw clean package -DskipTests
             
-            # Restart backend service
+            # Restart backend
             sudo systemctl restart novel-backend
             
             # Build frontend
@@ -58,5 +35,8 @@ jobs:
             npm ci
             npm run build
             
-            # Copy to nginx
+            # Deploy frontend
+            sudo rm -rf /var/www/novel-platform/*
             sudo cp -r dist/* /var/www/novel-platform/
+            
+            echo "Deployment complete!"
