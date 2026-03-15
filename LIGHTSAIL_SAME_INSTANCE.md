@@ -1,4 +1,4 @@
-# Deploy Novel Platform on Existing Lightsail Instance
+# Deploy ReadSphere on Existing Lightsail Instance
 
 Your instance: `makanview-app` (2GB RAM, 2 vCPUs) at `13.235.184.27`
 
@@ -50,8 +50,8 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE noveldb TO noveluser;
 
 ```bash
 cd /home/ubuntu
-git clone https://github.com/YOUR_USERNAME/novel-platform.git
-cd novel-platform
+git clone https://github.com/ankit980533/readSphere.git readsphere
+cd readsphere
 ```
 
 
@@ -131,17 +131,17 @@ sudo cp -r dist/* /var/www/novel-platform/
 ## Step 9: Configure Nginx
 
 ```bash
-sudo nano /etc/nginx/sites-available/novel-platform
+sudo nano /etc/nginx/sites-available/readsphere
 ```
 
 **Option A: Subdomain (recommended)**
 ```nginx
 server {
     listen 80;
-    server_name novel.yourdomain.com;
+    server_name readsphere.yourdomain.com;
 
     location / {
-        root /var/www/novel-platform;
+        root /var/www/readsphere;
         index index.html;
         try_files $uri $uri/ /index.html;
     }
@@ -158,13 +158,13 @@ server {
 **Option B: Path-based (if no subdomain)**
 ```nginx
 # Add to your existing nginx config
-location /novel {
-    alias /var/www/novel-platform;
+location /readsphere {
+    alias /var/www/readsphere;
     index index.html;
-    try_files $uri $uri/ /novel/index.html;
+    try_files $uri $uri/ /readsphere/index.html;
 }
 
-location /novel/api {
+location /readsphere/api {
     proxy_pass http://127.0.0.1:8080/api;
     proxy_set_header Host $host;
     client_max_body_size 50M;
@@ -173,7 +173,7 @@ location /novel/api {
 
 Enable site:
 ```bash
-sudo ln -s /etc/nginx/sites-available/novel-platform /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/readsphere /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```

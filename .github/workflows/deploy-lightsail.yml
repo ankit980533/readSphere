@@ -19,7 +19,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
-            cd /home/ubuntu/novel-platform
+            cd /home/ubuntu/readsphere
             git pull origin main
             
             # Build backend
@@ -28,7 +28,7 @@ jobs:
             ./mvnw clean package -DskipTests
             
             # Restart backend
-            sudo systemctl restart novel-backend
+            sudo systemctl restart readsphere-backend
             
             # Build frontend
             cd ../web
@@ -36,7 +36,7 @@ jobs:
             npm run build
             
             # Deploy frontend
-            sudo rm -rf /var/www/novel-platform/*
-            sudo cp -r dist/* /var/www/novel-platform/
+            sudo rm -rf /var/www/readsphere/*
+            sudo cp -r dist/* /var/www/readsphere/
             
             echo "Deployment complete!"
