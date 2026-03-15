@@ -72,7 +72,11 @@ public class PdfProcessingService {
         if (genreId == null && aiEnabled) {
             String detectedGenre = detectGenreWithAI(title, description, text);
             genre = genreRepository.findByName(detectedGenre)
-                    .orElse(genreRepository.findById(1L).orElseThrow());
+                    .orElseGet(() -> {
+                        Genre newGenre = new Genre();
+                        newGenre.setName(detectedGenre);
+                        return genreRepository.save(newGenre);
+                    });
         } else {
             genre = genreRepository.findById(genreId)
                     .orElseThrow(() -> new RuntimeException("Genre not found"));
@@ -249,7 +253,11 @@ public class PdfProcessingService {
 
         // Find or create genre
         Genre genre = genreRepository.findByName(finalGenre)
-                .orElse(genreRepository.findById(1L).orElse(null));
+                .orElseGet(() -> {
+                    Genre newGenre = new Genre();
+                    newGenre.setName(finalGenre);
+                    return genreRepository.save(newGenre);
+                });
 
         User adminUser = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("Admin user not found"));
